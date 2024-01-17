@@ -1,0 +1,189 @@
+﻿using System;
+using System.IO;
+using Experiment.RootClassLibrary;
+
+namespace Experiment
+{
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+            //
+            // 注意:
+            //   Experiment.RootClassLibrary のビルドオプションで、デバッグシンボルは生成しないように指定する。
+            //   デバッグシンボルが生成されると、デコンパイルによってILを調べるのが面倒になるため。
+            //
+
+            TestNullConditionOperator();
+            TestOptimazationForMulAndDiv();
+            TestAssertion();
+            TestInlining();
+            TestGenerics();
+            Console.WriteLine();
+            Console.WriteLine("----------");
+            Console.WriteLine();
+            Console.WriteLine("Completed.");
+            Console.Beep();
+            _ = Console.ReadLine();
+        }
+
+        // obj.?Foo(<expression>) のメソッド呼び出しにおいて、objが null の場合に <expression> は評価されるか?
+        // => obj が null の場合は、<expression> は評価されない。
+        private static void TestNullConditionOperator()
+        {
+            Console.WriteLine();
+            Console.WriteLine($"----- {nameof(TestNullConditionOperator)} -----");
+            Console.WriteLine() ;
+
+            var obj1 = (SampleClass1?)new SampleClass1();
+
+            Console.WriteLine("'obj?.Execute(GetStringParameter())' の呼び出し (obj は 非null");
+
+            // obj1 が null ではない場合、 GetStringParameter() は呼び出される。
+            obj1?.Execute(GetStringParameter());
+
+            Console.WriteLine();
+
+            Console.WriteLine("'obj?.Execute(GetStringParameter())' の呼び出し (obj は null");
+            var obj2 = (SampleClass1?)null;
+            // obj2 が null である場合、 GetStringParameter() は呼び出されない。
+            obj2?.Execute(GetStringParameter());
+        }
+
+        // 2 のべき乗での乗除算および剰余算は シフトまたはマスク演算に最適化されるか?
+        // => IL では最適化されない。JIT による x64 機械語へのアセンブル時に最適化される。
+        private static void TestOptimazationForMulAndDiv()
+        {
+            //
+            // 注意:
+            // 最適化の効果を見たいので、"Experiment.RootClassLibrary" プロジェクトを依存関係に設定するのではなく
+            // "Experiment.RootClassLibrary" から生成された Release 版のアセンブリを "参照" で追加すること。
+            //  
+
+            Console.WriteLine();
+            Console.WriteLine($"----- {nameof(TestOptimazationForMulAndDiv)} -----");
+            Console.WriteLine();
+
+            var value = 10000;
+
+            // 符号付整数の乗算
+            var mul = OptimizeMulAndDiv.MultiplyBy1024(value); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"{value} * 1024 => {mul}");
+
+            // 符号付整数の除算
+            var div = OptimizeMulAndDiv.DivideBy1024(value); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"{value} / 1024 => {div}");
+
+            // 符号付整数の剰余算
+            var rem = OptimizeMulAndDiv.RemainderAt1024(value); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"{value} % 1024 => {rem}");
+
+            var unsignedValue = 10000U;
+
+            // 符号無し整数の乗算
+            var umul = OptimizeMulAndDiv.UnsignedMultiplyBy1024(unsignedValue); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"{unsignedValue}U * 1024 => {umul}U");
+
+            // 符号無し整数の除算
+            var udiv = OptimizeMulAndDiv.UnsignedDivideBy1024(unsignedValue); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"{unsignedValue}U / 1024 => {udiv}U");
+
+            // 符号無し整数の剰余算
+            var urem = OptimizeMulAndDiv.UnsignedRemainderAt1024(unsignedValue); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"{unsignedValue}U % 1024 => {urem}U");
+        }
+
+        // System.Diagnostics.Debug.Assert(<condition>) において、<condition> の計算が副作用を持つ場合、Release 版ではその副作用は実行されるか?
+        // => 副作用は実行されない。例えば、
+        //      System.Diagnostics.Debug.Assert(Foo() == value);
+        //    のようなステートメントは、Release 版では
+        //      _ = (Foo() == value);
+        //    と同等になるのではなく、ただの空文となる。
+        private static void TestAssertion()
+        {
+            //
+            // 注意:
+            // Release版での結果を見たいので、"Experiment.RootClassLibrary" プロジェクトを依存関係に設定するのではなく
+            // "Experiment.RootClassLibrary" から生成された Release 版のアセンブリを "参照" で追加すること。
+            //  
+
+            Console.WriteLine();
+            Console.WriteLine($"----- {nameof(TestAssertion)} -----");
+            Console.WriteLine();
+
+            var baseDirectoryPath = Path.GetDirectoryName(typeof(Program).Assembly.Location) ?? throw new Exception();
+            var contentFilePath = Path.Combine(baseDirectoryPath, "content.txt");
+            using (var inStream = new FileStream(contentFilePath, FileMode.Open, FileAccess.Read))
+            {
+                Span<byte> buffer = stackalloc byte[5];
+                Assertion.ReadBuffer(inStream, buffer); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+
+                // 'Assertion.ReadBuffer()' では実質何も行われないので、buffer の内容は常に初期値から変わっていない。(つまりすべて 0)
+                Console.WriteLine($"buffer => [0x{buffer[0]:x2}, 0x{buffer[1]:x2}, 0x{buffer[2]:x2}, 0x{buffer[3]:x2}, 0x{buffer[4]:x2}]");
+            }
+        }
+
+        // [MethodImpl(MethodImplOptions.AggressiveInlining)] 属性のある単純な public メソッドは、他のアセンブリにもインライン展開されるか?
+        // => テストプログラムではインライン展開はされていなかった。そもそも確実にインライン展開される保証がない。
+        private static void TestInlining()
+        {
+            //
+            // 注意:
+            // Release版での結果を見たいので、"Experiment.RootClassLibrary" プロジェクトを依存関係に設定するのではなく
+            // "Experiment.RootClassLibrary" から生成された Release 版のアセンブリを "参照" で追加すること。
+            //  
+
+            Console.WriteLine();
+            Console.WriteLine($"----- {nameof(TestInlining)} -----");
+            Console.WriteLine();
+
+            var x = 20;
+            var y = 3;
+
+            var resut1 = Calc.Add(x, y); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"{x} + 100 * {y} => {resut1}");
+
+            var resut2 = Calc.AddWithInlineAttribute(x, y); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"{x} + 100 * {y} => {resut2} (with inline attribute)");
+
+        }
+
+        // ジェネリックメソッドに型パラメタとして struct を与えた場合、ジェネリックメソッド内での型パラメタへの null チェックは省略されるか?
+        // => 型パラメタに class/struct のどちらも許容するジェネリックメソッドにおいて、呼び出し元が型パラメタに struct を与えた場合、ジェネリックメソッド内での型パラメタの null チェックは "常に非 null" であるように最適化される。
+        // ジェネリックメソッド内で型パラメタによる分岐処理を行っていた場合、分岐処理は最適化されるか?
+        // => 例えば型パラメタが 'TYPE_T' の場合に TYPE_T が ある特定の型と等しいかどうかのチェックを行う場合、"typeof(TYPE_T) == typeof(int)" のようにすると実行時に "常にtrue" または "常に false" であるように最適化される。
+        //    同様に型パラメタのチェックを行う場合に Type.GetTypeCode(typeof(TYPE_T)) で取得できる TypeCode 列挙体による比較も可能ではあるが、こちらは最適化されず、型の比較コードがそのまま残ってしまう。
+        private static void TestGenerics()
+        {
+            //
+            // 注意:
+            // Release版での結果を見たいので、"Experiment.RootClassLibrary" プロジェクトを依存関係に設定するのではなく
+            // "Experiment.RootClassLibrary" から生成された Release 版のアセンブリを "参照" で追加すること。
+            //  
+
+            Console.WriteLine();
+            Console.WriteLine($"----- {nameof(TestGenerics)} -----");
+            Console.WriteLine();
+
+            var x = 1;
+            var y = 10;
+            var min1 = ImplementationOfGenericMethods.Minimum1(x, y); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"Minimum1({x}, {y}) => {min1}");
+
+            var min2 = ImplementationOfGenericMethods.Minimum2(x, y); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"Minimum1({x}, {y}) => {min2}");
+
+            var sizeOfInt1 = ImplementationOfGenericMethods.GetSizeOfInt1(); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"sizeof(int) => {sizeOfInt1} (pattern 1)");
+
+            var sizeOfInt2 = ImplementationOfGenericMethods.GetSizeOfInt2(); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"sizeof(int) => {sizeOfInt2} (pattern 2)");
+        }
+
+        private static string GetStringParameter()
+        {
+            Console.WriteLine("Called 'GetStringParameter()'");
+            return "Hello!";
+        }
+    }
+}
