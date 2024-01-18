@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using Experiment.RootClassLibrary;
 
 namespace Experiment
@@ -29,6 +30,7 @@ namespace Experiment
 
         // obj.?Foo(<expression>) のメソッド呼び出しにおいて、objが null の場合に <expression> は評価されるか?
         // => obj が null の場合は、<expression> は評価されない。
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         private static void TestNullConditionOperator()
         {
             Console.WriteLine();
@@ -56,6 +58,7 @@ namespace Experiment
 
         // 2 のべき乗での乗除算および剰余は シフトまたはマスク演算に最適化されるか?
         // => IL では最適化されない。JIT による x64 機械語へのアセンブル時に最適化される。
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         private static void TestOptimazationForMulAndDiv()
         {
             Console.WriteLine(nameof(OptimizeMulAndDiv));
@@ -69,7 +72,7 @@ namespace Experiment
             Console.WriteLine($"----- {nameof(TestOptimazationForMulAndDiv)} -----");
             Console.WriteLine();
 
-            var value = 10000;
+            var value = Environment.TickCount; // 定数ではない値であれば何でもいい
 
             // 符号付整数の乗算
             var mul = OptimizeMulAndDiv.MultiplyBy1024(value); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
@@ -83,7 +86,7 @@ namespace Experiment
             var rem = OptimizeMulAndDiv.RemainderAt1024(value); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
             Console.WriteLine($"{value} % 1024 => {rem}");
 
-            var unsignedValue = 10000U;
+            var unsignedValue = checked((UInt32)Environment.TickCount); // 定数ではない値であれば何でもいい
 
             // 符号無し整数の乗算
             var umul = OptimizeMulAndDiv.UnsignedMultiplyBy1024(unsignedValue); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
@@ -104,6 +107,7 @@ namespace Experiment
         //    のようなステートメントは、Release 版では
         //      _ = (Foo() == value);
         //    と同等になるのではなく、ただの空文となる。
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         private static void TestAssertion()
         {
             //
@@ -132,6 +136,7 @@ namespace Experiment
         // => 展開される。
         //    ただし、既定では Quick JIT という機能が有効になっており、これが有効だと最適化よりもコンパイル速度 (≒アプリケーションの起動速度) が優先され、インライン展開そのものが行われない。
         //    対策は、アプリケーションプロジェクトのプロジェクトファイルに "<TieredCompilationQuickJit>false</TieredCompilationQuickJit>" を追加する。クラスライブラリのプロジェクトファイルには追加不要。
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         private static void TestInlining()
         {
             //
@@ -178,6 +183,7 @@ namespace Experiment
         // ジェネリックメソッド内で型パラメタによる分岐処理を行っていた場合、分岐処理は最適化されるか?
         // => 例えば型パラメタが 'TYPE_T' の場合に TYPE_T が ある特定の型と等しいかどうかのチェックを行う場合、"typeof(TYPE_T) == typeof(int)" のようにすると実行時に "常にtrue" または "常に false" であるように最適化される。
         //    同様に型パラメタのチェックを行う場合に Type.GetTypeCode(typeof(TYPE_T)) で取得できる TypeCode 列挙体による比較も可能ではあるが、こちらは最適化されず、型の比較コードがそのまま残ってしまう。
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         private static void TestGenerics()
         {
             //
@@ -207,6 +213,7 @@ namespace Experiment
             Console.WriteLine($"sizeof(int) => {sizeOfInt2} (pattern 2)");
         }
 
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         private static string GetStringParameter()
         {
             Console.WriteLine("Called 'GetStringParameter()'");
