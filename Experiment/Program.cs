@@ -48,12 +48,17 @@ namespace Experiment
             var obj2 = (SampleClass1?)null;
             // obj2 が null である場合、 GetStringParameter() は呼び出されない。
             obj2?.Execute(GetStringParameter());
+
+            if (obj2 is not null)
+                obj2.Execute(GetStringParameter());
+
         }
 
-        // 2 のべき乗での乗除算および剰余算は シフトまたはマスク演算に最適化されるか?
+        // 2 のべき乗での乗除算および剰余は シフトまたはマスク演算に最適化されるか?
         // => IL では最適化されない。JIT による x64 機械語へのアセンブル時に最適化される。
         private static void TestOptimazationForMulAndDiv()
         {
+            Console.WriteLine(nameof(OptimizeMulAndDiv));
             //
             // 注意:
             // 最適化の効果を見たいので、"Experiment.RootClassLibrary" プロジェクトを依存関係に設定するのではなく
@@ -74,7 +79,7 @@ namespace Experiment
             var div = OptimizeMulAndDiv.DivideBy1024(value); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
             Console.WriteLine($"{value} / 1024 => {div}");
 
-            // 符号付整数の剰余算
+            // 符号付整数の剰余
             var rem = OptimizeMulAndDiv.RemainderAt1024(value); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
             Console.WriteLine($"{value} % 1024 => {rem}");
 
@@ -88,7 +93,7 @@ namespace Experiment
             var udiv = OptimizeMulAndDiv.UnsignedDivideBy1024(unsignedValue); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
             Console.WriteLine($"{unsignedValue}U / 1024 => {udiv}U");
 
-            // 符号無し整数の剰余算
+            // 符号無し整数の剰余
             var urem = OptimizeMulAndDiv.UnsignedRemainderAt1024(unsignedValue); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
             Console.WriteLine($"{unsignedValue}U % 1024 => {urem}U");
         }
@@ -124,7 +129,9 @@ namespace Experiment
         }
 
         // [MethodImpl(MethodImplOptions.AggressiveInlining)] 属性のある単純な public メソッドは、他のアセンブリにもインライン展開されるか?
-        // => テストプログラムではインライン展開はされていなかった。そもそも確実にインライン展開される保証がない。
+        // => 展開される。
+        //    ただし、既定では Quick JIT という機能が有効になっており、これが有効だと最適化よりもコンパイル速度 (≒アプリケーションの起動速度) が優先され、インライン展開そのものが行われない。
+        //    対策は、アプリケーションプロジェクトのプロジェクトファイルに "<TieredCompilationQuickJit>false</TieredCompilationQuickJit>" を追加する。クラスライブラリのプロジェクトファイルには追加不要。
         private static void TestInlining()
         {
             //
@@ -140,11 +147,29 @@ namespace Experiment
             var x = 20;
             var y = 3;
 
-            var resut1 = Calc.Add(x, y); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            // 同一クラス内の private メソッドは自動的にインライン化されるか?
+            var resut1 = Calc.AddForSameClass(x, y); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
             Console.WriteLine($"{x} + 100 * {y} => {resut1}");
 
-            var resut2 = Calc.AddWithInlineAttribute(x, y); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
-            Console.WriteLine($"{x} + 100 * {y} => {resut2} (with inline attribute)");
+            // 同一クラス内の private クラスのメソッドは自動的にインライン化されるか?
+            var resut2 = Calc.AddForPrivateClass(x, y); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"{x} + 100 * {y} => {resut2}");
+
+            // 同一アセンブリ内の internal クラス内の public メソッドは自動的にインライン化されるか?
+            var resut3 = Calc.AddForInternalClass(x, y); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"{x} + 100 * {y} => {resut3}");
+
+            // 同一アセンブリ内の public クラス内の public メソッドは自動的にインライン化されるか?
+            var resut4 = Calc.AddForPublicClass(x, y); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"{x} + 100 * {y} => {resut4}");
+
+            // 異なるアセンブリのメソッドは自動的にインライン化されるか?
+            var resut5 = Calc.AddAcrossAssembly(x, y); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"{x} + 100 * {y} => {resut5}");
+
+            // インライン化属性が付加された、異なるアセンブリのメソッドはインライン化されるか?
+            var resut6 = Calc.InlinedAddAcrossAssembly(x, y); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            Console.WriteLine($"{x} + 100 * {y} => {resut6}");
 
         }
 
@@ -170,8 +195,10 @@ namespace Experiment
             var min1 = ImplementationOfGenericMethods.Minimum1(x, y); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
             Console.WriteLine($"Minimum1({x}, {y}) => {min1}");
 
+#if NET7_0_OR_GREATER
             var min2 = ImplementationOfGenericMethods.Minimum2(x, y); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
             Console.WriteLine($"Minimum1({x}, {y}) => {min2}");
+#endif
 
             var sizeOfInt1 = ImplementationOfGenericMethods.GetSizeOfInt1(); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
             Console.WriteLine($"sizeof(int) => {sizeOfInt1} (pattern 1)");

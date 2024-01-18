@@ -15,6 +15,7 @@ namespace Experiment.InternalClassLibrary
                 ? y
                 : x;
 
+#if NET7_0_OR_GREATER
         public static VALUE_T Minimum2<VALUE_T>(VALUE_T x, VALUE_T y)
             where VALUE_T : IComparisonOperators<VALUE_T, VALUE_T, bool>
             => x is null
@@ -24,6 +25,8 @@ namespace Experiment.InternalClassLibrary
                 : x > y
                 ? y
                 : x;
+
+#endif
 
         public static int GetSizeOfType1<TYPE_T>()
         {

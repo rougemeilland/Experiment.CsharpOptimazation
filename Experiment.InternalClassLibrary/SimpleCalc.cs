@@ -7,6 +7,6 @@ namespace Experiment.InternalClassLibrary
         public static int Add(int x, int y) => x + y;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int AddWithInlineAttribute(int x, int y) => x + y;
+        public static int InlinedAdd(int x, int y) => x + y;
     }
 }

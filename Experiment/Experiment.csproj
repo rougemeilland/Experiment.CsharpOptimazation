@@ -1,11 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFrameworks>net6.0</TargetFrameworks>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0|AnyCPU'">
@@ -26,7 +27,7 @@
 
   <ItemGroup>
     <Reference Include="Experiment.RootClassLibrary">
-      <HintPath>..\Experiment.RootClassLibrary\bin\Release\net8.0\Experiment.RootClassLibrary.dll</HintPath>
+      <HintPath>..\Experiment.RootClassLibrary\bin\Release\net6.0\Experiment.RootClassLibrary.dll</HintPath>
     </Reference>
   </ItemGroup>
 
