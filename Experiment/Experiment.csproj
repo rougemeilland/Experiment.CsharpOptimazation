@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net6.0</TargetFrameworks>
+    <TargetFrameworks>net8.0</TargetFrameworks>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -27,7 +27,7 @@
 
   <ItemGroup>
     <Reference Include="Experiment.RootClassLibrary">
-      <HintPath>..\Experiment.RootClassLibrary\bin\Release\net6.0\Experiment.RootClassLibrary.dll</HintPath>
+      <HintPath>..\Experiment.RootClassLibrary\bin\Release\net8.0\Experiment.RootClassLibrary.dll</HintPath>
     </Reference>
   </ItemGroup>
 

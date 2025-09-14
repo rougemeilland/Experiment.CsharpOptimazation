@@ -5,9 +5,9 @@ using Experiment.RootClassLibrary;
 
 namespace Experiment
 {
-    internal class Program
+    internal sealed class Program
     {
-        static void Main(string[] args)
+        private static void Main()
         {
             //
             // 注意:
@@ -51,8 +51,7 @@ namespace Experiment
             // obj2 が null である場合、 GetStringParameter() は呼び出されない。
             obj2?.Execute(GetStringParameter());
 
-            if (obj2 is not null)
-                obj2.Execute(GetStringParameter());
+            obj2?.Execute(GetStringParameter());
 
         }
 
@@ -86,7 +85,7 @@ namespace Experiment
             var rem = OptimizeMulAndDiv.RemainderAt1024(value); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
             Console.WriteLine($"{value} % 1024 => {rem}");
 
-            var unsignedValue = checked((UInt32)Environment.TickCount); // 定数ではない値であれば何でもいい
+            var unsignedValue = checked((uint)Environment.TickCount); // 定数ではない値であれば何でもいい
 
             // 符号無し整数の乗算
             var umul = OptimizeMulAndDiv.UnsignedMultiplyBy1024(unsignedValue); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
@@ -122,14 +121,12 @@ namespace Experiment
 
             var baseDirectoryPath = Path.GetDirectoryName(typeof(Program).Assembly.Location) ?? throw new Exception();
             var contentFilePath = Path.Combine(baseDirectoryPath, "content.txt");
-            using (var inStream = new FileStream(contentFilePath, FileMode.Open, FileAccess.Read))
-            {
-                Span<byte> buffer = stackalloc byte[5];
-                Assertion.ReadBuffer(inStream, buffer); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
+            using var inStream = new FileStream(contentFilePath, FileMode.Open, FileAccess.Read);
+            Span<byte> buffer = stackalloc byte[5];
+            Assertion.ReadBuffer(inStream, buffer); // <= ここにブレークポイントを設定して、停止したら逆アセンブリ画面で追跡する。
 
-                // 'Assertion.ReadBuffer()' では実質何も行われないので、buffer の内容は常に初期値から変わっていない。(つまりすべて 0)
-                Console.WriteLine($"buffer => [0x{buffer[0]:x2}, 0x{buffer[1]:x2}, 0x{buffer[2]:x2}, 0x{buffer[3]:x2}, 0x{buffer[4]:x2}]");
-            }
+            // 'Assertion.ReadBuffer()' では実質何も行われないので、buffer の内容は常に初期値から変わっていない。(つまりすべて 0)
+            Console.WriteLine($"buffer => [0x{buffer[0]:x2}, 0x{buffer[1]:x2}, 0x{buffer[2]:x2}, 0x{buffer[3]:x2}, 0x{buffer[4]:x2}]");
         }
 
         // [MethodImpl(MethodImplOptions.AggressiveInlining)] 属性のある単純な public メソッドは、他のアセンブリにもインライン展開されるか?
